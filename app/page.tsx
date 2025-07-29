@@ -1,94 +1,129 @@
 "use client"
 
 import { useState } from "react"
-import { MessageCircle, BarChart3, Users, Smile } from "lucide-react"
+import { MessageCircle, BarChart3, Users, Smile, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import FileUpload from "@/components/file-upload"
 import ChatAnalytics from "@/components/chat-analytics"
 import MessageTimeline from "@/components/message-timeline"
 import UserStats from "@/components/user-stats"
 import WordCloud from "@/components/word-cloud"
 import EmojiAnalysis from "@/components/emoji-analysis"
+import { parseChatFile, analyzeChatData, type ChatAnalysis } from "@/lib/chat-parser"
 
 export default function WhatstatAnalyzer() {
-  const [chatData, setChatData] = useState(null)
+  const [chatData, setChatData] = useState<ChatAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   const handleFileUpload = async (file: File) => {
     setIsAnalyzing(true)
+    setError(null)
+    setDebugInfo(null)
 
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      console.log("Reading file:", file.name, "Size:", file.size, "bytes")
+      const content = await file.text()
+      console.log("File content loaded, length:", content.length)
 
-    // Mock analysis results
-    const mockData = {
-      totalMessages: 15847,
-      totalWords: 89234,
-      participants: ["Alice", "Bob", "Charlie", "Diana"],
-      dateRange: {
-        start: "2023-01-15",
-        end: "2024-01-29",
-      },
-      topEmojis: ["😂", "❤️", "👍", "😊", "🔥"],
-      dailyActivity: generateMockDailyData(),
-      hourlyActivity: generateMockHourlyData(),
-      userStats: generateMockUserStats(),
-      wordFrequency: generateMockWordData(),
-      mediaCount: 1247,
+      // Show first few lines for debugging
+      const lines = content.split(/\r?\n/).slice(0, 10)
+      const debugLines = lines.map((line, i) => `${i}: ${line}`).join("\n")
+      setDebugInfo(`First 10 lines of your file:\n${debugLines}`)
+
+      // Parse the chat file
+      const messages = parseChatFile(content)
+
+      if (messages.length === 0) {
+        throw new Error(`No valid messages found. 
+
+Possible issues:
+1. The file might not be a WhatsApp chat export
+2. The date/time format might not be recognized
+3. The file might be corrupted or empty
+
+Please make sure you:
+- Export the chat from WhatsApp (not a screenshot)
+- Choose "Export Chat" → "Without Media"
+- Upload the .txt file that WhatsApp creates
+
+Debug info: Found ${content.split(/\r?\n/).length} lines in the file.`)
+      }
+
+      console.log(`Successfully parsed ${messages.length} messages`)
+
+      // Analyze the parsed messages
+      const analysis = analyzeChatData(messages)
+
+      setChatData(analysis)
+      setDebugInfo(null) // Clear debug info on success
+    } catch (err) {
+      console.error("Error analyzing chat:", err)
+      setError(err instanceof Error ? err.message : "Failed to analyze chat file")
+    } finally {
+      setIsAnalyzing(false)
     }
-
-    setChatData(mockData)
-    setIsAnalyzing(false)
   }
 
-  const generateMockDailyData = () => {
-    return Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(2024, 0, i + 1).toISOString().split("T")[0],
-      messages: Math.floor(Math.random() * 200) + 50,
-    }))
-  }
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
+        <div className="container mx-auto px-4 py-8">
+          <Card className="max-w-4xl mx-auto border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl text-red-600 flex items-center justify-center gap-2">
+                <AlertCircle className="h-6 w-6" />
+                Analysis Error
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
+              </Alert>
 
-  const generateMockHourlyData = () => {
-    return Array.from({ length: 24 }, (_, i) => ({
-      hour: i,
-      messages: Math.floor(Math.random() * 100) + 10,
-    }))
-  }
+              {debugInfo && (
+                <div className="mt-4">
+                  <h4 className="font-semibold mb-2">Debug Information:</h4>
+                  <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap">
+                    {debugInfo}
+                  </pre>
+                </div>
+              )}
 
-  const generateMockUserStats = () => {
-    return [
-      { name: "Alice", messages: 4521, words: 23456, avgLength: 5.2, color: "#8B5CF6" },
-      { name: "Bob", messages: 3892, words: 19834, avgLength: 5.1, color: "#06B6D4" },
-      { name: "Charlie", messages: 4234, words: 25123, avgLength: 5.9, color: "#10B981" },
-      { name: "Diana", messages: 3200, words: 20821, avgLength: 6.5, color: "#F59E0B" },
-    ]
-  }
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">How to export your WhatsApp chat correctly:</h4>
+                <ol className="text-sm text-blue-800 space-y-1">
+                  <li>1. Open WhatsApp and go to the chat you want to analyze</li>
+                  <li>2. Tap the three dots menu (⋮) → More → Export chat</li>
+                  <li>3. Choose "Without Media" for faster processing</li>
+                  <li>4. Save the .txt file and upload it here</li>
+                  <li>5. Make sure the file is a .txt file (not a screenshot or image)</li>
+                </ol>
+              </div>
 
-  const generateMockWordData = () => {
-    const words = [
-      "love",
-      "good",
-      "time",
-      "work",
-      "home",
-      "family",
-      "friend",
-      "happy",
-      "great",
-      "nice",
-      "thanks",
-      "sure",
-      "okay",
-      "yeah",
-      "cool",
-    ]
-    return words.map((word) => ({
-      text: word,
-      value: Math.floor(Math.random() * 500) + 100,
-    }))
+              <div className="text-center">
+                <Button
+                  onClick={() => {
+                    setError(null)
+                    setChatData(null)
+                    setDebugInfo(null)
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   if (!chatData) {
@@ -150,11 +185,18 @@ export default function WhatstatAnalyzer() {
                 <h4 className="font-semibold text-blue-900 mb-2">How to export your WhatsApp chat:</h4>
                 <ol className="text-sm text-blue-800 space-y-1">
                   <li>1. Open WhatsApp and go to the chat you want to analyze</li>
-                  <li>2. Tap the three dots menu → More → Export chat</li>
+                  <li>2. Tap the three dots menu (⋮) → More → Export chat</li>
                   <li>3. Choose "Without Media" for faster processing</li>
                   <li>4. Save the .txt file and upload it here</li>
                 </ol>
               </div>
+
+              {debugInfo && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold mb-2">File Preview:</h4>
+                  <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{debugInfo}</pre>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

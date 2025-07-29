@@ -5,38 +5,45 @@ import { Badge } from "@/components/ui/badge"
 import { Smile, Heart, Zap } from "lucide-react"
 
 interface EmojiAnalysisProps {
-  data: any
+  data: {
+    emojiStats: Array<{
+      emoji: string
+      name: string
+      count: number
+      category: string
+    }>
+    totalMessages: number
+  }
 }
 
 export default function EmojiAnalysis({ data }: EmojiAnalysisProps) {
-  const emojiData = [
-    { emoji: "😂", name: "Face with Tears of Joy", count: 1247, category: "happy" },
-    { emoji: "❤️", name: "Red Heart", count: 892, category: "love" },
-    { emoji: "👍", name: "Thumbs Up", count: 654, category: "positive" },
-    { emoji: "😊", name: "Smiling Face", count: 543, category: "happy" },
-    { emoji: "🔥", name: "Fire", count: 432, category: "excited" },
-    { emoji: "😭", name: "Loudly Crying Face", count: 321, category: "sad" },
-    { emoji: "🤣", name: "Rolling on Floor Laughing", count: 298, category: "happy" },
-    { emoji: "😍", name: "Smiling Face with Heart-Eyes", count: 276, category: "love" },
-    { emoji: "👏", name: "Clapping Hands", count: 234, category: "positive" },
-    { emoji: "💯", name: "Hundred Points", count: 198, category: "excited" },
-  ]
-
   const categoryColors = {
     happy: "#10B981",
     love: "#EF4444",
-    positive: "#06B6D4",
+    other: "#06B6D4",
     excited: "#F59E0B",
     sad: "#8B5CF6",
   }
 
-  const totalEmojis = emojiData.reduce((sum, emoji) => sum + emoji.count, 0)
-  const maxCount = Math.max(...emojiData.map((emoji) => emoji.count))
+  const totalEmojis = data.emojiStats.reduce((sum, emoji) => sum + emoji.count, 0)
+  const maxCount = Math.max(...data.emojiStats.map((emoji) => emoji.count))
 
-  const categoryStats = emojiData.reduce((acc: any, emoji) => {
+  const categoryStats = data.emojiStats.reduce((acc: any, emoji) => {
     acc[emoji.category] = (acc[emoji.category] || 0) + emoji.count
     return acc
   }, {})
+
+  if (data.emojiStats.length === 0) {
+    return (
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardContent className="p-8 text-center">
+          <Smile className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">No Emojis Found</h3>
+          <p className="text-gray-500">This chat doesn't contain any emojis to analyze.</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -51,7 +58,7 @@ export default function EmojiAnalysis({ data }: EmojiAnalysisProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {emojiData.slice(0, 10).map((emoji, index) => (
+            {data.emojiStats.slice(0, 10).map((emoji, index) => (
               <div key={index} className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="text-4xl mb-2">{emoji.emoji}</div>
                 <div className="font-semibold text-lg">{emoji.count}</div>
@@ -80,7 +87,7 @@ export default function EmojiAnalysis({ data }: EmojiAnalysisProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {emojiData.map((emoji, index) => (
+            {data.emojiStats.map((emoji, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div
@@ -155,7 +162,7 @@ export default function EmojiAnalysis({ data }: EmojiAnalysisProps) {
               <div className="text-sm text-gray-600">Total Emojis</div>
             </div>
             <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{emojiData.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{data.emojiStats.length}</div>
               <div className="text-sm text-gray-600">Unique Emojis</div>
             </div>
             <div className="p-4 bg-green-50 rounded-lg">
@@ -165,7 +172,7 @@ export default function EmojiAnalysis({ data }: EmojiAnalysisProps) {
               <div className="text-sm text-gray-600">Messages with Emojis</div>
             </div>
             <div className="p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{emojiData[0]?.emoji || "😂"}</div>
+              <div className="text-2xl font-bold text-orange-600">{data.emojiStats[0]?.emoji || "N/A"}</div>
               <div className="text-sm text-gray-600">Most Popular</div>
             </div>
           </div>
