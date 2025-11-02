@@ -35,8 +35,6 @@ export default function FileUpload({ onFileUpload, isAnalyzing }: FileUploadProp
         const file = e.dataTransfer.files[0]
         if (file.type === "text/plain" || file.name.endsWith(".txt")) {
           onFileUpload(file)
-        } else {
-          alert("Please upload a .txt file exported from WhatsApp")
         }
       }
     },
@@ -48,8 +46,6 @@ export default function FileUpload({ onFileUpload, isAnalyzing }: FileUploadProp
       const file = e.target.files[0]
       if (file.type === "text/plain" || file.name.endsWith(".txt")) {
         onFileUpload(file)
-      } else {
-        alert("Please upload a .txt file exported from WhatsApp")
       }
     }
   }
